@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Panel Avanzado de Trading</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #121212;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+        .chart-container {
+            background-color: #1e1e1e;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        .price-panel {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: space-between;
+        }
+        .price-card {
+            background-color: #2a2a2a;
+            border-radius: 8px;
+            padding: 10px;
+            width: calc(50% - 5px);
+            transition: transform 0.3s;
+        }
+        .price-card:hover {
+            transform: scale(1.05);
+        }
+        .positive { color: #4caf50; }
+        .negative { color: #f44336; }
+        .title {
+            text-align: center;
+            color: #ffffff;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="title">Panel de Trading Avanzado</h1>
+        
+        <div class="price-panel" id="pricePanel"></div>
+
+        <div class="grid">
+            <div class="chart-container">
+                <canvas id="mainChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <canvas id="volumeChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <canvas id="rsiChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <canvas id="macdChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <canvas id="candlestickChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <canvas id="portfolioChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuración de datos y gráficos
+        class TradingDashboard {
+            constructor() {
+                this.assets = [
+                    { name: 'Bitcoin', symbol: 'BTC' },
+                    { name: 'Ethereum', symbol: 'ETH' },
+                    { name: 'Nasdaq', symbol: 'NDX' },
+                    { name: 'S&P 500', symbol: 'SPX' }
+                ];
+                this.charts = {};
+                this.initCharts();
+                this.updatePrices();
+                this.startLiveUpdates();
+            }
+
+            generateRandomData(count = 50, start = 100, volatility = 5) {
+                let data = [start];
+                for (let i = 1; i < count; i++) {
+                    let change = Math.random() * volatility * 2 - volatility;
+                    data.push(Math.max(0, data[i-1] + change));
+                }
+                return data;
+            }
+
+            initCharts() {
+                // Configuraciones de gráficos
+                const chartConfigs = [
+                    { 
+                        id: 'mainChart', 
+                        type: 'line', 
+                        label: 'Precio Principal',
+                        options: { 
+                            responsive: true,
+                            plugins: { title: { display: true, text: 'Precio de Activo' } }
+                        }
+                    },
+                    { 
+                        id: 'volumeChart', 
+                        type: 'bar', 
+                        label: 'Volumen',
+                        options: { 
+                            responsive: true,
+                            plugins: { title: { display: true, text: 'Volumen de Trading' } }
+                        }
+                    },
+                    { 
+                        id: 'rsiChart', 
+                        type: 'line', 
+                        label: 'RSI',
+                        options: { 
+                            responsive: true,
+                            plugins: { title: { display: true, text: 'Índice de Fuerza Relativa' } }
+                        }
+                    },
+                    { 
+                        id: 'macdChart', 
+                        type: 'line', 
+                        label: 'MACD',
+                        options: { 
+                            responsive: true,
+                            plugins: { title: { display: true, text: 'MACD' } }
+                        }
+                    }
+                ];
+
+                chartConfigs.forEach(config => {
+                    const ctx = document.getElementById(config.id).getContext('2d');
+                    this.charts[config.id] = new Chart(ctx, {
+                        type: config.type,
+                        data: {
+                            labels: Array.from({length: 50}, (_, i) => i),
+                            datasets: [{
+                                label: config.label,
+                                data: this.generateRandomData(),
+                                borderColor: this.getRandomColor(),
+                                tension: 0.3
+                            }]
+                        },
+                        options: config.options
+                    });
+                });
+            }
+
+            updatePrices() {
+                const pricePanel = document.getElementById('pricePanel');
+                pricePanel.innerHTML = this.assets.map(asset => {
+                    const price = Math.random() * 1000 + 100;
+                    const change = Math.random() * 10 - 5;
+                    const changePercent = (change / price * 100).toFixed(2);
+                    const className = change >= 0 ? 'positive' : 'negative';
+
+                    return `
+                        <div class="price-card">
+                            <h4>${asset.name} (${asset.symbol})</h4>
+                            <p>$${price.toFixed(2)} 
+                                <span class="${className}">${change >= 0 ? '+' : ''}${changePercent}%</span>
+                            </p>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            startLiveUpdates() {
+                setInterval(() => {
+                    // Actualizar gráficos
+                    Object.values(this.charts).forEach(chart => {
+                        chart.data.datasets[0].data = this.generateRandomData();
+                        chart.update();
+                    });
+
+                    // Actualizar precios
+                    this.updatePrices();
+                }, 1000);
+            }
+
+            getRandomColor() {
+                const letters = '0123456789ABCDEF';
+                let color = '#';
+                for (let i = 0; i < 6; i++) {
+                    color += letters[Math.floor(Math.random() * 16)];
+                }
+                return color;
+            }
+        }
+
+        // Inicializar dashboard
+        new TradingDashboard();
+    </script>
+</body>
+</html>
